@@ -204,15 +204,24 @@ public class App extends JFrame {
         c.gridx = 1; c.fill = GridBagConstraints.HORIZONTAL; p.add(tfRecipient, c);
         c.fill = GridBagConstraints.NONE;
 
-        // Row 5 – Save button
+        // Row 5 – Save + Test buttons
+        JPanel btnRow = darkPanel(new FlowLayout(FlowLayout.CENTER, 12, 0));
         JButton saveBtn = styledButton("Save Settings", C_ACCENT, C_BG);
         saveBtn.addActionListener(new ActionListener() {
             @Override public void actionPerformed(ActionEvent e) { saveEmailConfig(); }
         });
+        btnRow.add(saveBtn);
+
+        final JButton testBtn = styledButton("Send Test Email", C_YELLOW, C_BG);
+        testBtn.addActionListener(new ActionListener() {
+            @Override public void actionPerformed(ActionEvent e) { sendTestEmail(testBtn); }
+        });
+        btnRow.add(testBtn);
+
         c.gridx = 0; c.gridy = 5; c.gridwidth = 2;
         c.anchor = GridBagConstraints.CENTER;
         c.insets = new Insets(16, 4, 8, 4);
-        p.add(saveBtn, c);
+        p.add(btnRow, c);
 
         // Row 6 – Hint
         c.gridy = 6; c.anchor = GridBagConstraints.WEST;
@@ -308,6 +317,32 @@ public class App extends JFrame {
                         "Error", JOptionPane.ERROR_MESSAGE);
             }
         }
+    }
+
+    // ── Test email ────────────────────────────────────────────────────────────
+
+    private void sendTestEmail(final JButton btn) {
+        btn.setEnabled(false);
+        btn.setText("Sending...");
+        logger.sendTestEmail(new java.util.function.Consumer<String>() {
+            @Override public void accept(String error) {
+                SwingUtilities.invokeLater(new Runnable() {
+                    @Override public void run() {
+                        btn.setEnabled(true);
+                        btn.setText("Send Test Email");
+                        if (error == null) {
+                            JOptionPane.showMessageDialog(App.this,
+                                    "Test email sent successfully!",
+                                    "Email OK", JOptionPane.INFORMATION_MESSAGE);
+                        } else {
+                            JOptionPane.showMessageDialog(App.this,
+                                    "Failed to send email:\n" + error,
+                                    "Email Error", JOptionPane.ERROR_MESSAGE);
+                        }
+                    }
+                });
+            }
+        });
     }
 
     // ── Log appending ─────────────────────────────────────────────────────────

