@@ -1,0 +1,18 @@
+{
+    "java.project.referencedLibraries": [
+        "lib/**/*.jar"
+    ],
+    "java.project.sourcePaths": [
+        "src/main/java"
+    ],
+    "java.compile.nullAnalysis.mode": "disabled",
+    "java.configuration.updateBuildConfiguration": "interactive",
+    "java.configuration.runtimes": [
+        {
+            "name": "JavaSE-11",
+            "path": "${workspaceFolder}/jdk/jdk-11.0.31+11",
+            "default": true
+        }
+    ],
+    "java.jdt.ls.java.home": "C:/Users/Test/Downloads/Keylogger---WIP---Education-main/jdk/jdk-11.0.31+11"
+}
