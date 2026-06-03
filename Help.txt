@@ -1,0 +1,96 @@
+===========================================================================
+ KeyLogger v1.0  —  HW3 Cyber Security
+===========================================================================
+
+REQUIREMENTS
+------------
+- Java 17 or newer  (java --version)
+- Apache Maven      (mvn --version)
+
+BUILD
+-----
+  cd keylogger
+  mvn package
+
+This produces:  target/keylogger-1.0.jar  (fat JAR, all dependencies bundled)
+
+RUN
+---
+  java -jar target/keylogger-1.0.jar
+
+On Windows you may need to run as Administrator so JNativeHook can install
+its native keyboard/mouse hook.
+
+---------------------------------------------------------------------------
+PART 1 — General keystroke & mouse logging
+---------------------------------------------------------------------------
+
+HOW TO START/STOP
+  Press the green "▶ Start" button in the GUI.
+  Press "■ Stop" to stop.  The session is also closed when the window is
+  closed.
+
+OUTPUT FILE:  keylog.txt  (created in the folder you run the JAR from)
+
+WHAT IS LOGGED
+  • Every key press — printable characters appear as-is; special keys are
+    shown in brackets, e.g. [ENTER], [TAB], [CTRL], [SHIFT], [F5], etc.
+  • Mouse clicks   — button number and pixel position  [CLICK↓ btn1 (x,y)]
+  • Mouse scroll   — direction and position            [SCROLL▼ (x,y)]
+  • Mouse movement — position is sampled once every 2 seconds to keep the
+    log readable                                       [MOVE (x,y)]
+  • Session markers with timestamps at start and stop.
+
+---------------------------------------------------------------------------
+PART 2 — Password / credential detection
+---------------------------------------------------------------------------
+
+OUTPUT FILE:  passwords.txt  (separate file, never mixed with keylog.txt)
+
+DETECTION SCENARIOS
+  A. TYPED     — user enters  username [TAB] password [ENTER]
+                 The text before Tab is treated as the username; text after
+                 Tab up to Enter is treated as the password.
+
+  B. TYPED     — user types directly into a password field and presses
+                 [ENTER] without a Tab (e.g. PIN entry, app login).
+
+  C. CLIPBOARD_PASTE — user copies a password from a password manager or
+                 file, then pastes it with Ctrl+V and presses [ENTER].
+                 The clipboard content at the moment of Ctrl+V is captured.
+
+  D. 2FA_CODE  — after the normal login, a second [ENTER] follows a short
+                 (4–8 digit) numeric string.  This is flagged separately so
+                 the attacker knows to act within the 30-/60-second OTP
+                 window.
+
+All detected events are:
+  1. Written to passwords.txt with timestamp, window title, username
+     (if detected), and the captured password/code.
+  2. Shown in the "Credentials" tab of the GUI.
+  3. Optionally sent as an email alert (see below).
+
+EMAIL NOTIFICATIONS
+  Open the "Settings" tab in the GUI and fill in:
+    • Sender Gmail address  (the account used to send the alert)
+    • Gmail App Password    (NOT your Gmail login — generate one at
+                             myaccount.google.com → Security → App Passwords
+                             after enabling 2-Step Verification)
+    • Recipient address     (where the alert is delivered)
+  Tick "Enable email alerts" and click "Save Settings".
+  Settings are persisted in  email.properties  next to the JAR.
+
+  Because email sending happens in a background thread the keylogger never
+  blocks waiting for the server; delivery happens within seconds so 2FA
+  codes arrive well within the typical 30-second validity window.
+
+---------------------------------------------------------------------------
+NOTES
+---------------------------------------------------------------------------
+• keylog.txt and passwords.txt are created (or appended to) in the current
+  working directory — the folder from which you run the JAR.
+• A new session header is appended each time you press Start, so multiple
+  sessions accumulate in the same files.
+• This tool is developed purely for the educational purposes of HW3 and
+  must only be run on machines you own or have explicit permission to test.
+===========================================================================
